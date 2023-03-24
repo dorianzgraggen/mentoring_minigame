@@ -4,8 +4,7 @@ pub struct GameScenePlugin;
 
 impl Plugin for GameScenePlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup)
-            .add_startup_system(handle_gltf_scene);
+        app.add_startup_system(setup).add_system(handle_gltf_scene);
     }
 }
 
@@ -40,12 +39,19 @@ fn handle_gltf_scene(
     moved_scene: Query<Entity, With<LoadedScene>>,
     children: Query<&Children>,
     mut transforms: Query<&mut Transform>,
+    meshes: Res<Assets<Mesh>>,
 ) {
+    println!("============== begin");
+    for (handle_id, mesh) in meshes.iter() {
+        println!("mesh {:#?}", handle_id);
+        // TODO: add colliders
+    }
+
     for moved_scene_entity in &moved_scene {
         let mut offset = 0.;
         // println("{:#?}", moved_scene_entity.);
         for entity in children.iter_descendants(moved_scene_entity) {
-            println!("entitity");
+            println!("============== entitity");
 
             // if let Ok(mut transform) = transforms.get_mut(entity) {
             //     transform.translation = Vec3::new(
