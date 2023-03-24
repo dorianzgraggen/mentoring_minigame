@@ -1,4 +1,5 @@
 use bevy::gltf::Gltf;
+use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
@@ -8,6 +9,7 @@ fn main() {
         .add_plugin(HelloPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
+        .add_system(print_keyboard_event_system)
         // .add_startup_system(setup_physics)
         // .add_startup_system(load_gltf)
         // .add_system(spawn_gltf_objects)
@@ -25,6 +27,12 @@ fn add_people(mut commands: Commands) {
     commands.spawn((Person, Name("Elaina Proctor".to_string())));
     commands.spawn((Person, Name("Renzo Hume".to_string())));
     commands.spawn((Person, Name("Zayna Nieves".to_string())));
+}
+
+fn print_keyboard_event_system(mut keyboard_input_events: EventReader<KeyboardInput>) {
+    for event in keyboard_input_events.iter() {
+        info!("{:?}", event);
+    }
 }
 
 fn handle_gltf_scene(
