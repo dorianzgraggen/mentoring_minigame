@@ -1,3 +1,4 @@
+use bevy::gltf::Gltf;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
@@ -7,8 +8,10 @@ fn main() {
         .add_plugin(HelloPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
-        .add_startup_system(setup_physics)
-        // .add_startup_system(setup)
+        // .add_startup_system(setup_physics)
+        // .add_startup_system(load_gltf)
+        // .add_system(spawn_gltf_objects)
+        .add_startup_system(setup)
         .run();
 }
 
@@ -22,6 +25,28 @@ fn add_people(mut commands: Commands) {
     commands.spawn((Person, Name("Elaina Proctor".to_string())));
     commands.spawn((Person, Name("Renzo Hume".to_string())));
     commands.spawn((Person, Name("Zayna Nieves".to_string())));
+}
+
+fn handle_gltf_scene(
+    time: Res<Time>,
+    moved_scene: Query<Entity, With<LoadedScene>>,
+    children: Query<&Children>,
+    mut transforms: Query<&mut Transform>,
+) {
+    for moved_scene_entity in &moved_scene {
+        let mut offset = 0.;
+        // println("{:#?}", moved_scene_entity.);
+        for entity in children.iter_descendants(moved_scene_entity) {
+            if let Ok(mut transform) = transforms.get_mut(entity) {
+                transform.translation = Vec3::new(
+                    offset * time.elapsed_seconds().sin() / 20.,
+                    0.,
+                    time.elapsed_seconds().cos() / 20.,
+                );
+                offset += 1.0;
+            }
+        }
+    }
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -41,10 +66,66 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..default()
     });
 
-    commands.spawn(SceneBundle {
-        scene: asset_server.load("level.gltf#Scene0"),
+    commands.spawn((
+        SceneBundle {
+            scene: asset_server.load("level.gltf#Scene0"),
+            ..default()
+        },
+        LoadedScene,
+    ));
+}
+
+#[derive(Resource)]
+struct MyAssetPack(Handle<Gltf>);
+
+#[derive(Component)]
+struct LoadedScene;
+
+fn load_gltf(mut commands: Commands, ass: Res<AssetServer>) {
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_xyz(0.0, 10.0, 0.0)
+            .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::X),
         ..default()
     });
+
+    commands.spawn(PointLightBundle {
+        point_light: PointLight {
+            intensity: 1500.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_xyz(4.0, 8.0, 4.0),
+        ..default()
+    });
+
+    let gltf = ass.load("level.gltf");
+    commands.insert_resource(MyAssetPack(gltf));
+}
+
+fn spawn_gltf_objects(
+    mut commands: Commands,
+    my: Res<MyAssetPack>,
+    assets_gltf: Res<Assets<Gltf>>,
+) {
+    // if the GLTF has loaded, we can navigate its contents
+    if let Some(gltf) = assets_gltf.get(&my.0) {
+        // spawn the first scene in the file
+        commands.spawn(SceneBundle {
+            scene: gltf.scenes[0].clone(),
+            ..Default::default()
+        });
+
+        // spawn the scene named "YellowCar"
+        commands.spawn(SceneBundle {
+            scene: gltf.named_scenes["YellowCar"].clone(),
+            transform: Transform::from_xyz(1.0, 2.0, 3.0),
+            ..Default::default()
+        });
+
+        let s = gltf.named_scenes["YellowCar"].clone();
+
+        // PERF: the `.clone()`s are just for asset handles, don't worry :)
+    }
 }
 
 fn setup_physics(mut commands: Commands, asset_server: Res<AssetServer>) {
