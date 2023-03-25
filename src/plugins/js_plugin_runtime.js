@@ -19,6 +19,10 @@ globalThis.fetchText = async (url) => {
   return core.opAsync("op_fetch", url);
 };
 
+globalThis.getStr = (string) => {
+  return ops.op_get_str(string);
+}
+
 // globalThis.player = {
 //   setX: (x) => {
 //     core.opSync("op_player_set_x", x);

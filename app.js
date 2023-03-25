@@ -6,3 +6,5 @@ let content = await fetchText(
 console.log("fetched", content);
 
 // player.setX(-2);
+
+console.log(getStr("nice"));
