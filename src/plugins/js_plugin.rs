@@ -15,8 +15,12 @@ pub struct JsPlugin;
 
 impl Plugin for JsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(js_system);
+        app.add_startup_system(spawn_js_system);
     }
+}
+
+fn spawn_js_system() {
+    std::thread::spawn(js_system);
 }
 
 fn js_system() {
