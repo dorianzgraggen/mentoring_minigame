@@ -18,3 +18,9 @@ globalThis.console = console;
 globalThis.fetchText = async (url) => {
   return core.opAsync("op_fetch", url);
 };
+
+// globalThis.player = {
+//   setX: (x) => {
+//     core.opSync("op_player_set_x", x);
+//   }
+// }

@@ -8,7 +8,12 @@ impl Plugin for GameScenePlugin {
     }
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0.0, 10.0, 0.0)
             .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::X),
@@ -32,7 +37,26 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         },
         LoadedScene,
     ));
+
+    let player_mesh = meshes.add(shape::Capsule::default().into());
+    let player_material = materials.add(StandardMaterial {
+        base_color: Color::TOMATO,
+        ..default()
+    });
+
+    commands.spawn((
+        PbrBundle {
+            mesh: player_mesh,
+            material: player_material,
+            transform: Transform::from_xyz(0., 0., 0.),
+            ..default()
+        },
+        Player,
+    ));
 }
+
+#[derive(Component)]
+struct Player;
 
 fn handle_gltf_scene(
     time: Res<Time>,
@@ -41,17 +65,21 @@ fn handle_gltf_scene(
     mut transforms: Query<&mut Transform>,
     meshes: Res<Assets<Mesh>>,
 ) {
-    println!("============== begin");
+    // println!("============== begin");
     for (handle_id, mesh) in meshes.iter() {
-        println!("mesh {:#?}", handle_id);
+        // println!("mesh {:#?}", handle_id);
         // TODO: add colliders
     }
 
     for moved_scene_entity in &moved_scene {
+        if let Ok(t) = transforms.get_mut(moved_scene_entity) {
+            // println!("transform: {:#?}", t.translation);
+        }
+
         let mut offset = 0.;
         // println("{:#?}", moved_scene_entity.);
         for entity in children.iter_descendants(moved_scene_entity) {
-            println!("============== entitity");
+            // println!("============== entitity");
 
             // if let Ok(mut transform) = transforms.get_mut(entity) {
             //     transform.translation = Vec3::new(
