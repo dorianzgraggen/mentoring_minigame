@@ -23,8 +23,12 @@ globalThis.getStr = (string) => {
   return ops.op_get_str(string);
 }
 
-// globalThis.player = {
-//   setX: (x) => {
-//     core.opSync("op_player_set_x", x);
-//   }
-// }
+globalThis.player = {
+  setX: (x) => {
+    ops.op_command(JSON.stringify({ command: "player_set_x", x }))
+  }
+}
+
+globalThis.sleep = async (milliseconds) => {
+  return core.opAsync("op_sleep", milliseconds);
+}
