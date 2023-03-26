@@ -56,7 +56,7 @@ fn setup(
 }
 
 #[derive(Component)]
-struct Player;
+pub struct Player;
 
 fn handle_gltf_scene(
     time: Res<Time>,
