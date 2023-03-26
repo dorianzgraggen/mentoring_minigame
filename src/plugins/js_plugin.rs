@@ -28,6 +28,7 @@ fn js_system() {
     let file_path = "./app.js";
 
     let runtime = tokio::runtime::Builder::new_current_thread()
+        .thread_name("js_plugin thread")
         .enable_all()
         .build()
         .unwrap();
@@ -56,6 +57,12 @@ fn op_command(state: &mut OpState, command: String) -> Result<(), AnyError> {
 }
 
 #[op]
+fn op_get_events_json(state: &mut OpState) -> Result<String, AnyError> {
+    let events = state.borrow_mut::<Commander>().get_events();
+    Ok(events)
+}
+
+#[op]
 async fn op_sleep(milliseconds: u64) -> Result<(), AnyError> {
     sleep(Duration::from_millis(milliseconds)).await;
     Ok(())
@@ -70,6 +77,7 @@ async fn run_js(file_path: &str) -> Result<(), AnyError> {
             op_get_str::decl(),
             op_command::decl(),
             op_sleep::decl(),
+            op_get_events_json::decl(),
         ])
         .build();
     let mut js_runtime = deno_core::JsRuntime::new(deno_core::RuntimeOptions {
@@ -104,5 +112,19 @@ impl Commander {
         let addr = SocketAddr::from(([127, 0, 0, 1], 2000));
         let bytes = command.as_bytes();
         self.sock.send_to(bytes, addr).unwrap();
+    }
+
+    // TODO: find out how deno does this
+    pub fn get_events(&mut self) -> String {
+        let addr = SocketAddr::from(([127, 0, 0, 1], 52122));
+        let bytes = "send help".as_bytes();
+        self.sock.send_to(bytes, addr).unwrap();
+
+        let mut buf = [0; 2048];
+        let (number_of_bytes, src_addr) = self.sock.recv_from(&mut buf).unwrap();
+
+        let filled_buf = &mut buf[..number_of_bytes];
+
+        std::str::from_utf8(filled_buf).unwrap().into()
     }
 }

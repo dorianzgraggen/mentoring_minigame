@@ -35,3 +35,35 @@ globalThis.player = {
 globalThis.sleep = async (milliseconds) => {
   return core.opAsync("op_sleep", milliseconds);
 }
+
+
+globalThis.__runtimeInternal = {
+  event_list: { "keydown": [] },
+  handleEvents: () => {
+    const string = ops.op_get_events_json();
+    const json = JSON.parse(string);
+
+    json.events.forEach(event => {
+      let listed_event = globalThis.__runtimeInternal.event_list[event.type];
+      if (!listed_event) {
+        console.error(`Event of type '${type}' is not yet listed.`);
+        return;
+      }
+
+      listed_event.forEach(listener => listener(event.data));
+    });
+  }
+}
+
+globalThis.controls = {
+  addEventListener: (type, listener) => {
+    const event = globalThis.__runtimeInternal.event_list[type];
+
+    if (!event) {
+      console.error(`Event of type '${type}' does not exist`);
+      return;
+    }
+
+    event.push(listener);
+  }
+}

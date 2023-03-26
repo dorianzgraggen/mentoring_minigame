@@ -38,21 +38,18 @@ fn setup(world: &mut World) {
 
 fn poll(cr: NonSend<CommandsResource>, mut query: Query<&mut Transform, With<Player>>) {
     if let Ok(received) = cr.rx.try_recv() {
-        println!("polled: {}", received);
         let deserialized: Command = serde_json::from_str(&received).unwrap();
-        println!("deserialized = {:?}", deserialized);
 
-        match deserialized.id.as_str() {
+        let command_id = deserialized.id.as_str();
+        match command_id {
             "player_set_position" => {
-                println!("setting position");
                 let args: ArrayF32 = serde_json::from_str(&deserialized.args).unwrap();
-                println!("args {:?}", args);
                 for mut t in &mut query {
                     t.translation = Vec3::new(args.0[0], args.0[1], args.0[2]);
                 }
             }
             _ => {
-                println!("command not found");
+                println!("command not found: {}", command_id);
             }
         }
     }
@@ -66,7 +63,6 @@ fn udp_server(tx: Sender<String>) -> std::io::Result<()> {
         let (number_of_bytes, src_addr) = socket.recv_from(&mut buf)?;
         let buf = &mut buf[..number_of_bytes];
         let s = std::str::from_utf8(buf).unwrap();
-        println!("received: {}", s);
 
         match tx.send(s.into()) {
             Ok(_) => (),
