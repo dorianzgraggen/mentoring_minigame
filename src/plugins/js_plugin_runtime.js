@@ -29,7 +29,8 @@ function build_command(id, ...args) {
 
 globalThis.player = {
   setX: (x) => build_command("player_set_x", x),
-  setPosition: (x, y, z) => build_command("player_set_position", x, y, z)
+  setPosition: (x, y, z) => build_command("player_set_position", x, y, z),
+  setRandomColor: () => build_command("player_set_color", Math.random() * 360, 1, 0.5)
 }
 
 globalThis.sleep = async (milliseconds) => {
@@ -41,18 +42,22 @@ globalThis.__runtimeInternal = {
   event_list: { "keydown": [] },
   handleEvents: () => {
     const string = ops.op_get_events_json();
-    const json = JSON.parse(string);
+    const events = JSON.parse(string);
 
-    return json;
+    events.forEach(event => {
+      let listed_event = globalThis.__runtimeInternal.event_list[event.event_type];
 
-    json.events.forEach(event => {
-      let listed_event = globalThis.__runtimeInternal.event_list[event.type];
       if (!listed_event) {
-        console.error(`Event of type '${type}' is not yet listed.`);
+        console.error(`Event of type '${event.event_type}' is not yet listed.`);
         return;
       }
 
-      listed_event.forEach(listener => listener(event.data));
+      event["type"] = event["event_type"]
+      delete event["event_type"];
+
+      event["data"] = JSON.parse(event["data"]);
+
+      listed_event.forEach(listener => listener(event));
     });
   }
 }

@@ -36,7 +36,12 @@ fn setup(world: &mut World) {
     // let received = rx.recv().unwrap();
 }
 
-fn poll(cr: NonSend<CommandsResource>, mut query: Query<&mut Transform, With<Player>>) {
+fn poll(
+    cr: NonSend<CommandsResource>,
+    mut query: Query<&mut Transform, With<Player>>,
+    players: Query<&Player>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     if let Ok(received) = cr.rx.try_recv() {
         let deserialized: Command = serde_json::from_str(&received).unwrap();
 
@@ -46,6 +51,14 @@ fn poll(cr: NonSend<CommandsResource>, mut query: Query<&mut Transform, With<Pla
                 let args: ArrayF32 = serde_json::from_str(&deserialized.args).unwrap();
                 for mut t in &mut query {
                     t.translation = Vec3::new(args.0[0], args.0[1], args.0[2]);
+                }
+            }
+            "player_set_color" => {
+                let args: ArrayF32 = serde_json::from_str(&deserialized.args).unwrap();
+                for p in &players {
+                    if let Some(material) = materials.get_mut(&p.material) {
+                        material.base_color = Color::hsl(args.0[0], args.0[1], args.0[2]);
+                    }
                 }
             }
             _ => {

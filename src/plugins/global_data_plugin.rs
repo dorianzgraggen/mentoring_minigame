@@ -32,8 +32,8 @@ fn change_data(
     data: NonSend<Arc<Mutex<GlobalData>>>,
 ) {
     if timer.0.tick(time.delta()).just_finished() {
-        let mut global_data = data.lock().unwrap();
-        global_data.add_data("miau".into());
-        println!("data {:#?}", global_data.get_data())
+        // let mut global_data = data.lock().unwrap();
+        // global_data.add_data("miau".into());
+        // println!("data {:#?}", global_data.get_data())
     }
 }

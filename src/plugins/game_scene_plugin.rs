@@ -47,16 +47,20 @@ fn setup(
     commands.spawn((
         PbrBundle {
             mesh: player_mesh,
-            material: player_material,
+            material: player_material.clone(),
             transform: Transform::from_xyz(0., 0., 0.),
             ..default()
         },
-        Player,
+        Player {
+            material: player_material,
+        },
     ));
 }
 
 #[derive(Component)]
-pub struct Player;
+pub struct Player {
+    pub material: Handle<StandardMaterial>,
+}
 
 fn handle_gltf_scene(
     time: Res<Time>,

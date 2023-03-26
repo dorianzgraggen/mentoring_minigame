@@ -17,6 +17,8 @@ use std::sync::{Arc, Mutex};
 
 use crate::RunSet;
 
+use super::input_plugin::JsEvent2;
+
 pub struct JsPlugin;
 
 impl Plugin for JsPlugin {
@@ -27,16 +29,20 @@ impl Plugin for JsPlugin {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GlobalData {
-    events: Vec<String>,
+    events: Vec<JsEvent2>,
 }
 
 impl GlobalData {
-    pub fn add_data(&mut self, data: String) {
+    pub fn add_data(&mut self, data: JsEvent2) {
         self.events.push(data);
     }
 
-    pub fn get_data(&self) -> Vec<String> {
+    pub fn get_data(&self) -> Vec<JsEvent2> {
         self.events.clone()
+    }
+
+    pub fn clear_data(&mut self) {
+        self.events.clear();
     }
 }
 
@@ -154,9 +160,11 @@ impl Commander {
         // let filled_buf = &mut buf[..number_of_bytes];
 
         let stringified = {
-            let s = self.data.lock().unwrap();
+            let mut s = self.data.lock().unwrap();
             let data = s.get_data();
-            serde_json::to_string(&data).unwrap()
+            let stringified = serde_json::to_string(&data).unwrap();
+            s.clear_data();
+            stringified
         };
 
         std::str::from_utf8(stringified.as_bytes()).unwrap().into()
