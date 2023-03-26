@@ -3,6 +3,10 @@ use bevy::prelude::*;
 use std::net::UdpSocket;
 use std::sync::mpsc::{self, Receiver, Sender};
 
+use serde::{Deserialize, Serialize};
+
+use super::game_scene_plugin::Player;
+
 pub struct CommandsPlugin;
 
 impl Plugin for CommandsPlugin {
@@ -10,6 +14,15 @@ impl Plugin for CommandsPlugin {
         app.add_startup_system(setup).add_system(poll);
     }
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Command {
+    id: String,
+    args: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ArrayF32(Vec<f32>);
 
 pub struct CommandsResource {
     rx: Receiver<String>,
@@ -23,9 +36,25 @@ fn setup(world: &mut World) {
     // let received = rx.recv().unwrap();
 }
 
-fn poll(cr: NonSend<CommandsResource>) {
+fn poll(cr: NonSend<CommandsResource>, mut query: Query<&mut Transform, With<Player>>) {
     if let Ok(received) = cr.rx.try_recv() {
         println!("polled: {}", received);
+        let deserialized: Command = serde_json::from_str(&received).unwrap();
+        println!("deserialized = {:?}", deserialized);
+
+        match deserialized.id.as_str() {
+            "player_set_position" => {
+                println!("setting position");
+                let args: ArrayF32 = serde_json::from_str(&deserialized.args).unwrap();
+                println!("args {:?}", args);
+                for mut t in &mut query {
+                    t.translation = Vec3::new(args.0[0], args.0[1], args.0[2]);
+                }
+            }
+            _ => {
+                println!("command not found");
+            }
+        }
     }
 }
 

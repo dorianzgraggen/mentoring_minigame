@@ -23,10 +23,13 @@ globalThis.getStr = (string) => {
   return ops.op_get_str(string);
 }
 
+function build_command(id, ...args) {
+  return ops.op_command(JSON.stringify({ id, args: JSON.stringify(args) }))
+}
+
 globalThis.player = {
-  setX: (x) => {
-    ops.op_command(JSON.stringify({ command: "player_set_x", x }))
-  }
+  setX: (x) => build_command("player_set_x", x),
+  setPosition: (x, y, z) => build_command("player_set_position", x, y, z)
 }
 
 globalThis.sleep = async (milliseconds) => {

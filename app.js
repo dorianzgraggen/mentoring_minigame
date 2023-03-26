@@ -12,7 +12,7 @@ console.log(getStr("nice"));
 let i = 0;
 while (true) {
   try {
-    await sleep(1000.0);
+    await sleep(16.0);
 
   } catch (error) {
     console.log(error)
@@ -26,5 +26,5 @@ while (true) {
 
 function tick() {
   // console.log("tick: " + i)
-  player.setX(i);
+  player.setPosition(Math.sin(i / 12), 0, Math.cos(i / 12));
 }
