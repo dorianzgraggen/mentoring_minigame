@@ -25,5 +25,6 @@ while (true) {
 }
 
 function tick() {
-  console.log("tick: " + i)
+  // console.log("tick: " + i)
+  player.setX(i);
 }
