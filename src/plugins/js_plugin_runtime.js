@@ -43,6 +43,8 @@ globalThis.__runtimeInternal = {
     const string = ops.op_get_events_json();
     const json = JSON.parse(string);
 
+    return json;
+
     json.events.forEach(event => {
       let listed_event = globalThis.__runtimeInternal.event_list[event.type];
       if (!listed_event) {

@@ -29,9 +29,9 @@ while (true) {
 
 
 async function onBegin() {
-  controls.addEventListener("keydown", e => {
-    console.log("key is down lol")
-  })
+  // controls.addEventListener("keydown", e => {
+  //   console.log("key is down lol")
+  // })
 
 }
 
@@ -39,6 +39,7 @@ function tick() {
   // console.log("tick: " + i)
   player.setPosition(Math.sin(i / 12), 0, Math.cos(i / 12));
 
-  globalThis.__runtimeInternal.handleEvents()
+  let parsed = globalThis.__runtimeInternal.handleEvents()
+  console.log("parsed", parsed)
 }
 

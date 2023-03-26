@@ -12,19 +12,45 @@ use deno_core::OpState;
 
 use tokio::time::{sleep, Duration};
 
+use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
+
+use crate::RunSet;
+
 pub struct JsPlugin;
 
 impl Plugin for JsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn_js_system);
+        app.add_startup_system(spawn_js_system.in_set(RunSet::Pre));
     }
 }
 
-fn spawn_js_system() {
-    std::thread::spawn(js_system);
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GlobalData {
+    events: Vec<String>,
 }
 
-fn js_system() {
+impl GlobalData {
+    pub fn add_data(&mut self, data: String) {
+        self.events.push(data);
+    }
+
+    pub fn get_data(&self) -> Vec<String> {
+        self.events.clone()
+    }
+}
+
+fn spawn_js_system(world: &mut World) {
+    let origin = Arc::new(Mutex::new(GlobalData { events: vec![] }));
+    let clone = Arc::clone(&origin);
+    world.insert_non_send_resource(clone);
+
+    let clone2 = Arc::clone(&origin);
+
+    std::thread::spawn(move || js_system(clone2));
+}
+
+fn js_system(data: Arc<Mutex<GlobalData>>) {
     let file_path = "./app.js";
 
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -33,7 +59,7 @@ fn js_system() {
         .build()
         .unwrap();
 
-    if let Err(error) = runtime.block_on(run_js(file_path)) {
+    if let Err(error) = runtime.block_on(run_js(file_path, data)) {
         eprintln!("error: {error}");
     }
 }
@@ -68,7 +94,7 @@ async fn op_sleep(milliseconds: u64) -> Result<(), AnyError> {
     Ok(())
 }
 
-async fn run_js(file_path: &str) -> Result<(), AnyError> {
+async fn run_js(file_path: &str, data: Arc<Mutex<GlobalData>>) -> Result<(), AnyError> {
     let main_module = deno_core::resolve_path(file_path)?;
     let runjs_extension = Extension::builder("runjs")
         .esm(include_js_files!("js_plugin_runtime.js",))
@@ -93,6 +119,7 @@ async fn run_js(file_path: &str) -> Result<(), AnyError> {
     op_state.borrow_mut().put(Commander {
         value: "Hallo i bims".to_string(),
         sock,
+        data,
     });
 
     let mod_id = js_runtime.load_main_module(&main_module, None).await?;
@@ -104,6 +131,7 @@ async fn run_js(file_path: &str) -> Result<(), AnyError> {
 struct Commander {
     pub value: String,
     pub sock: UdpSocket,
+    pub data: Arc<Mutex<GlobalData>>,
 }
 
 impl Commander {
@@ -116,15 +144,21 @@ impl Commander {
 
     // TODO: find out how deno does this
     pub fn get_events(&mut self) -> String {
-        let addr = SocketAddr::from(([127, 0, 0, 1], 52122));
-        let bytes = "send help".as_bytes();
-        self.sock.send_to(bytes, addr).unwrap();
+        // let addr = SocketAddr::from(([127, 0, 0, 1], 52122));
+        // let bytes = "send help".as_bytes();
+        // self.sock.send_to(bytes, addr).unwrap();
 
-        let mut buf = [0; 2048];
-        let (number_of_bytes, src_addr) = self.sock.recv_from(&mut buf).unwrap();
+        // let mut buf = [0; 2048];
+        // let (number_of_bytes, src_addr) = self.sock.recv_from(&mut buf).unwrap();
 
-        let filled_buf = &mut buf[..number_of_bytes];
+        // let filled_buf = &mut buf[..number_of_bytes];
 
-        std::str::from_utf8(filled_buf).unwrap().into()
+        let stringified = {
+            let s = self.data.lock().unwrap();
+            let data = s.get_data();
+            serde_json::to_string(&data).unwrap()
+        };
+
+        std::str::from_utf8(stringified.as_bytes()).unwrap().into()
     }
 }
