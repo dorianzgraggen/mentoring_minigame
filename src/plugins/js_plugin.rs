@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::RunSet;
 
-use super::input_plugin::JsEvent2;
+use super::input_plugin::JsEvent;
 
 pub struct JsPlugin;
 
@@ -28,35 +28,31 @@ impl Plugin for JsPlugin {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GlobalData {
-    events: Vec<JsEvent2>,
+pub struct JsData {
+    events: Vec<JsEvent>,
 }
 
-impl GlobalData {
-    pub fn add_data(&mut self, data: JsEvent2) {
+impl JsData {
+    pub fn add_event(&mut self, data: JsEvent) {
         self.events.push(data);
     }
 
-    pub fn get_data(&self) -> Vec<JsEvent2> {
+    pub fn get_events(&self) -> Vec<JsEvent> {
         self.events.clone()
     }
 
-    pub fn clear_data(&mut self) {
+    pub fn clear_events(&mut self) {
         self.events.clear();
     }
 }
 
 fn spawn_js_system(world: &mut World) {
-    let origin = Arc::new(Mutex::new(GlobalData { events: vec![] }));
-    let clone = Arc::clone(&origin);
-    world.insert_non_send_resource(clone);
-
-    let clone2 = Arc::clone(&origin);
-
-    std::thread::spawn(move || js_system(clone2));
+    let js_data = Arc::new(Mutex::new(JsData { events: vec![] }));
+    world.insert_non_send_resource(Arc::clone(&js_data));
+    std::thread::spawn(move || js_system(Arc::clone(&js_data)));
 }
 
-fn js_system(data: Arc<Mutex<GlobalData>>) {
+fn js_system(data: Arc<Mutex<JsData>>) {
     let file_path = "./app.js";
 
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -78,19 +74,19 @@ async fn op_fetch(url: String) -> Result<String, AnyError> {
 
 #[op]
 fn op_get_str(state: &mut OpState, key: String) -> Result<String, AnyError> {
-    let s = state.borrow_mut::<Commander>().value.clone();
+    let s = state.borrow_mut::<OpStateData>().test_value.clone();
     Ok(s)
 }
 
 #[op]
 fn op_command(state: &mut OpState, command: String) -> Result<(), AnyError> {
-    state.borrow_mut::<Commander>().write_command(command);
+    state.borrow_mut::<OpStateData>().write_command(command);
     Ok(())
 }
 
 #[op]
 fn op_get_events_json(state: &mut OpState) -> Result<String, AnyError> {
-    let events = state.borrow_mut::<Commander>().get_events();
+    let events = state.borrow_mut::<OpStateData>().get_events();
     Ok(events)
 }
 
@@ -100,7 +96,7 @@ async fn op_sleep(milliseconds: u64) -> Result<(), AnyError> {
     Ok(())
 }
 
-async fn run_js(file_path: &str, data: Arc<Mutex<GlobalData>>) -> Result<(), AnyError> {
+async fn run_js(file_path: &str, data: Arc<Mutex<JsData>>) -> Result<(), AnyError> {
     let main_module = deno_core::resolve_path(file_path)?;
     let runjs_extension = Extension::builder("runjs")
         .esm(include_js_files!("js_plugin_runtime.js",))
@@ -122,10 +118,10 @@ async fn run_js(file_path: &str, data: Arc<Mutex<GlobalData>>) -> Result<(), Any
 
     let sock = UdpSocket::bind("0.0.0.0:8080").unwrap();
 
-    op_state.borrow_mut().put(Commander {
-        value: "Hallo i bims".to_string(),
-        sock,
-        data,
+    op_state.borrow_mut().put(OpStateData {
+        test_value: "Hallo i bims".to_string(),
+        udp_socket: sock,
+        js_data: data,
     });
 
     let mod_id = js_runtime.load_main_module(&main_module, None).await?;
@@ -134,18 +130,18 @@ async fn run_js(file_path: &str, data: Arc<Mutex<GlobalData>>) -> Result<(), Any
     result.await?
 }
 
-struct Commander {
-    pub value: String,
-    pub sock: UdpSocket,
-    pub data: Arc<Mutex<GlobalData>>,
+struct OpStateData {
+    pub test_value: String,
+    pub udp_socket: UdpSocket,
+    pub js_data: Arc<Mutex<JsData>>,
 }
 
-impl Commander {
+impl OpStateData {
     // TODO: https://tokio.rs/tokio/topics/bridging
     pub fn write_command(&mut self, command: String) {
         let addr = SocketAddr::from(([127, 0, 0, 1], 2000));
         let bytes = command.as_bytes();
-        self.sock.send_to(bytes, addr).unwrap();
+        self.udp_socket.send_to(bytes, addr).unwrap();
     }
 
     // TODO: find out how deno does this
@@ -160,10 +156,10 @@ impl Commander {
         // let filled_buf = &mut buf[..number_of_bytes];
 
         let stringified = {
-            let mut s = self.data.lock().unwrap();
-            let data = s.get_data();
+            let mut s = self.js_data.lock().unwrap();
+            let data = s.get_events();
             let stringified = serde_json::to_string(&data).unwrap();
-            s.clear_data();
+            s.clear_events();
             stringified
         };
 

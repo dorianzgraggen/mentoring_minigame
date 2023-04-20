@@ -1,7 +1,7 @@
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
 
-use super::js_plugin::GlobalData;
+use super::js_plugin::JsData;
 
 use super::game_scene_plugin::Player;
 use std::sync::{Arc, Mutex};
@@ -16,7 +16,7 @@ impl Plugin for InputPlugin {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct JsEvent2 {
+pub struct JsEvent {
     pub event_type: String,
     pub data: String,
 }
@@ -31,10 +31,10 @@ fn print_keyboard_event_system(
     mut keyboard_input_events: EventReader<KeyboardInput>,
     mut query: Query<&mut Transform, With<Player>>,
     time: Res<Time>,
-    data: NonSend<Arc<Mutex<GlobalData>>>,
+    data: NonSend<Arc<Mutex<JsData>>>,
     keyboard_input: Res<Input<KeyCode>>,
 ) {
-    let mut js_events: Vec<JsEvent2> = vec![];
+    let mut js_events: Vec<JsEvent> = vec![];
 
     for event in keyboard_input_events.iter() {
         info!("{:?}", event);
@@ -42,7 +42,7 @@ fn print_keyboard_event_system(
         if let Some(key_code) = event.key_code {
             if keyboard_input.just_pressed(key_code) {
                 let data = serde_json::to_string(&KeyboardEventData { key_code }).unwrap();
-                js_events.push(JsEvent2 {
+                js_events.push(JsEvent {
                     event_type: "keydown".into(),
                     data,
                 });
@@ -58,7 +58,7 @@ fn print_keyboard_event_system(
         let mut global_data = data.lock().unwrap();
 
         js_events.iter().for_each(|evt| {
-            global_data.add_data(evt.clone());
+            global_data.add_event(evt.clone());
         });
 
         // println!("data {:#?}", global_data.get_data())
