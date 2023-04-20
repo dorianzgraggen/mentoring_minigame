@@ -1,10 +1,9 @@
 use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
 
-use super::{js_event_plugin::JsEvent, js_plugin::GlobalData};
+use super::js_plugin::GlobalData;
 
 use super::game_scene_plugin::Player;
-use super::js_event_plugin::JsEventResource;
 use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
@@ -32,7 +31,6 @@ fn print_keyboard_event_system(
     mut keyboard_input_events: EventReader<KeyboardInput>,
     mut query: Query<&mut Transform, With<Player>>,
     time: Res<Time>,
-    js_event_resource: NonSend<Arc<Mutex<JsEventResource>>>,
     data: NonSend<Arc<Mutex<GlobalData>>>,
     keyboard_input: Res<Input<KeyCode>>,
 ) {
